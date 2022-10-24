@@ -1,0 +1,50 @@
+syntax = "proto3";
+package test;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/LilithGames/protoc-gen-dragonboat/testdata";
+
+message Person {
+  string name = 1;
+  int32 id = 2;
+  string email = 3;
+
+  enum PhoneType {
+    MOBILE = 0;
+    HOME = 1;
+    WORK = 2;
+  }
+
+  message PhoneNumber {
+    string number = 1;
+    PhoneType type = 2;
+  }
+
+  repeated PhoneNumber phones = 4;
+
+  google.protobuf.Timestamp last_updated = 5;
+}
+
+message Company {
+  string name = 1;
+}
+
+message AddressBook {
+  oneof data {
+    Person people = 1;
+    Company company = 2;
+  }
+}
+
+message QueryAddressBookRequest {
+  int32 id = 1;
+}
+
+message QueryAddressBookResponse {
+  repeated AddressBook data = 1;
+}
+
+service Test {
+  rpc QueryAddressBook(QueryAddressBookRequest) returns (QueryAddressBookResponse);
+}
