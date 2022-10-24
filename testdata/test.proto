@@ -2,6 +2,7 @@ syntax = "proto3";
 package test;
 
 import "google/protobuf/timestamp.proto";
+import "runtime/dragonboat.proto";
 
 option go_package = "github.com/LilithGames/protoc-gen-dragonboat/testdata";
 
@@ -44,7 +45,18 @@ message QueryAddressBookRequest {
 message QueryAddressBookResponse {
   repeated AddressBook data = 1;
 }
+message MutateAddressBookRequest {
+  int32 id = 1;
+}
+message MutateAddressBookResponse {
+  int32 count = 1;
+} 
 
 service Test {
   rpc QueryAddressBook(QueryAddressBookRequest) returns (QueryAddressBookResponse);
+  rpc MutateAddressBook(MutateAddressBookRequest) returns (MutateAddressBookResponse) {
+    option (dragonboat.options) = {
+      type: "mutation"
+    };
+  };
 }

@@ -1,0 +1,30 @@
+syntax = "proto3";
+package dragonboat;
+
+import "google/protobuf/descriptor.proto";
+import "google/protobuf/any.proto";
+option go_package = "github.com/LilithGames/protoc-gen-dragonboat/runtime";
+
+message DragonboatOption {
+  string type = 1;
+}
+
+extend google.protobuf.MethodOptions {
+  optional DragonboatOption options = 53000;
+}
+
+message DragonboatError {
+  int32 code = 1;
+  string msg = 2;
+}
+
+message DragonboatExample {
+  string data = 1;
+}
+message DragonboatRequest {
+  google.protobuf.Any data = 1;
+}
+message DragonboatResult {
+  google.protobuf.Any data = 1;
+  DragonboatError error = 2;
+}

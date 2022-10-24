@@ -3,7 +3,8 @@ package main
 import (
 	"text/template"
 
-	// "github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto"
+	"github.com/LilithGames/protoc-gen-dragonboat/runtime"
 	pgs "github.com/lyft/protoc-gen-star"
 	pgsgo "github.com/lyft/protoc-gen-star/lang/go"
 )
@@ -23,6 +24,32 @@ func (it *module) InitContext(c pgs.BuildContext) {
 	it.ctx = pgsgo.InitContext(c.Parameters())
 	tpl := template.New("event").Funcs(map[string]interface{}{
 		"package": it.ctx.PackageName,
+		"name": it.ctx.Name,
+		"default": func(value interface{}, defaultValue interface{}) interface{} {
+			switch v := value.(type) {
+			case string:
+				if v == "" {
+					return defaultValue
+				}
+			default:
+				panic("default: unknown type")
+			}
+			return value
+		},
+		"options": func(node pgs.Node) *runtime.DragonboatOption {
+			var opt interface{}
+			var err error
+			switch n := node.(type) {
+			case pgs.Method:
+				opt, err = proto.GetExtension(n.Descriptor().GetOptions(), runtime.E_Options)
+			default:
+				panic("node options not supported")
+			}
+			if err != nil {
+				return new(runtime.DragonboatOption)
+			}
+			return opt.(*runtime.DragonboatOption)
+		},
 	})
 	it.tpl = template.Must(tpl.Parse(tmpl))
 }

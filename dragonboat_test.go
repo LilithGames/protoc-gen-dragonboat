@@ -26,10 +26,10 @@ func newStateMachine(clusterID uint64, nodeID uint64) sm.IStateMachine {
 	return &stateMachine{ClusterID: clusterID, NodeID: nodeID}
 }
 func (it *stateMachine) Lookup(query interface{}) (interface{}, error) {
-	return it.Count, nil
+	return pb.DragonboatTestLookup(it, query)
 }
 func (it *stateMachine) Update(data []byte) (sm.Result, error) {
-	return sm.Result{}, nil
+	return pb.DragonboatTestUpdate(it, data)
 }
 func (it *stateMachine) SaveSnapshot(w io.Writer, fc sm.ISnapshotFileCollection, done <-chan struct{}) error {
 	return nil
@@ -39,6 +39,13 @@ func (it *stateMachine) RecoverFromSnapshot(r io.Reader, files []sm.SnapshotFile
 }
 func (it *stateMachine) Close() error {
 	return nil
+}
+
+func (it *stateMachine) QueryAddressBook(req *pb.QueryAddressBookRequest) (*pb.QueryAddressBookResponse, error) {
+	return nil, nil
+}
+func (it *stateMachine) MutateAddressBook(req *pb.MutateAddressBookRequest) (*pb.MutateAddressBookResponse, error) {
+	return nil, nil
 }
 
 func newDragonboat(t *testing.T) *dragonboat.NodeHost {
