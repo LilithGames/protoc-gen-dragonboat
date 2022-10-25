@@ -14,6 +14,8 @@ import (
 	"github.com/lni/dragonboat/v3"
 	"github.com/lni/dragonboat/v3/config"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/LilithGames/protoc-gen-dragonboat/runtime"
 )
 
 type stateMachine struct {
@@ -42,10 +44,15 @@ func (it *stateMachine) Close() error {
 }
 
 func (it *stateMachine) QueryAddressBook(req *pb.QueryAddressBookRequest) (*pb.QueryAddressBookResponse, error) {
-	return nil, nil
+	return &pb.QueryAddressBookResponse{
+		Data: []*pb.AddressBook{
+			&pb.AddressBook{Data: &pb.AddressBook_Company{Company: &pb.Company{Name: fmt.Sprintf("%d", it.Count)}}},
+		},
+	}, nil
 }
 func (it *stateMachine) MutateAddressBook(req *pb.MutateAddressBookRequest) (*pb.MutateAddressBookResponse, error) {
-	return nil, nil
+	it.Count++
+	return &pb.MutateAddressBookResponse{Count: int32(it.Count)}, nil
 }
 
 func newDragonboat(t *testing.T) *dragonboat.NodeHost {
@@ -104,9 +111,13 @@ func TestDragonboat(t *testing.T) {
 	}()
 	startShard(t, nh)
 	waitReady(nh)
-	ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
-	defer cancel()
-	value, err := nh.SyncRead(ctx, 0, nil)
+	client := pb.NewTestDragonboatClient(runtime.NewDragonboatClient(nh, 0))
+	resp, err := client.QueryAddressBook(context.TODO(), &pb.QueryAddressBookRequest{Id: 0}, runtime.WithClientTimeout(time.Second))
 	assert.Nil(t, err)
-	fmt.Printf("%+v\n", value)
+	assert.Equal(t, "0", resp.Data[0].Data.(*pb.AddressBook_Company).Company.Name)
+	_, err = client.MutateAddressBook(context.TODO(), &pb.MutateAddressBookRequest{Id: 0}, runtime.WithClientTimeout(time.Second))
+	assert.Nil(t, err)
+	resp, err = client.QueryAddressBook(context.TODO(), &pb.QueryAddressBookRequest{Id: 0}, runtime.WithClientTimeout(time.Second))
+	assert.Nil(t, err)
+	assert.Equal(t, "1", resp.Data[0].Data.(*pb.AddressBook_Company).Company.Name)
 }

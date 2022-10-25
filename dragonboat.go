@@ -69,4 +69,3 @@ func (it *module) generate(f pgs.File) {
 	name := it.ctx.OutputPath(f).SetExt(".dragonboat.go").String()
 	it.AddGeneratorTemplateFile(name, it.tpl, f)
 }
-

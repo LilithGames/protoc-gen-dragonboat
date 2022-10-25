@@ -2,8 +2,8 @@
 package testdata
 
 import (
+	"context"
 	"fmt"
-	// "context"
 
 	sm "github.com/lni/dragonboat/v3/statemachine"
 	"google.golang.org/protobuf/proto"
@@ -12,12 +12,17 @@ import (
 	"github.com/LilithGames/protoc-gen-dragonboat/runtime"
 )
 
-type ITestServer interface {
+type ITestDragonboatServer interface {
 	QueryAddressBook(req *QueryAddressBookRequest) (*QueryAddressBookResponse, error)
 	MutateAddressBook(req *MutateAddressBookRequest) (*MutateAddressBookResponse, error)
 }
 
-func DragonboatTestLookup(s ITestServer, query interface{}) (interface{}, error) {
+type ITestDragonboatClient interface {
+	QueryAddressBook(ctx context.Context, req *QueryAddressBookRequest, opts ...runtime.DragonboatClientOption) (*QueryAddressBookResponse, error)
+	MutateAddressBook(ctx context.Context, req *MutateAddressBookRequest, opts ...runtime.DragonboatClientOption) (*MutateAddressBookResponse, error)
+}
+
+func DragonboatTestLookup(s ITestDragonboatServer, query interface{}) (interface{}, error) {
 	switch q := query.(type) {
 	case *QueryAddressBookRequest:
 		resp, err := s.QueryAddressBook(q)
@@ -30,7 +35,7 @@ func DragonboatTestLookup(s ITestServer, query interface{}) (interface{}, error)
 	}
 }
 
-func DragonboatTestUpdate(s ITestServer, data []byte) (sm.Result, error) {
+func DragonboatTestUpdate(s ITestDragonboatServer, data []byte) (sm.Result, error) {
 	req := runtime.DragonboatRequest{}
 	if err := proto.Unmarshal(data, &req); err != nil {
 		return runtime.MakeDragonboatResult(nil, fmt.Errorf("DragonboatRequest unmarshal err: %w", err)), nil
@@ -45,5 +50,33 @@ func DragonboatTestUpdate(s ITestServer, data []byte) (sm.Result, error) {
 		return runtime.MakeDragonboatResult(resp, err), nil
 	default:
 		return runtime.MakeDragonboatResult(nil, fmt.Errorf("unknown mutation type: %T", m)), nil
+	}
+}
+
+type TestDragonboatClient struct {
+	client runtime.IDragonboatClient
+}
+
+func NewTestDragonboatClient(client runtime.IDragonboatClient) ITestDragonboatClient {
+	return &TestDragonboatClient{client: client}
+}
+func (it *TestDragonboatClient) QueryAddressBook(ctx context.Context, req *QueryAddressBookRequest, opts ...runtime.DragonboatClientOption) (*QueryAddressBookResponse, error) {
+	resp, err := it.client.Query(ctx, req, opts...)
+	if r, ok := resp.(*QueryAddressBookResponse); ok {
+		return r, err
+	} else if err != nil {
+		return nil, err
+	} else {
+		return nil, fmt.Errorf("cannot parse %T response type to *QueryAddressBookResponse", resp)
+	}
+}
+func (it *TestDragonboatClient) MutateAddressBook(ctx context.Context, req *MutateAddressBookRequest, opts ...runtime.DragonboatClientOption) (*MutateAddressBookResponse, error) {
+	resp, err := it.client.Mutate(ctx, req, opts...)
+	if r, ok := resp.(*MutateAddressBookResponse); ok {
+		return r, err
+	} else if err != nil {
+		return nil, err
+	} else {
+		return nil, fmt.Errorf("cannot parse %T response type to *MutateAddressBookResponse", resp)
 	}
 }

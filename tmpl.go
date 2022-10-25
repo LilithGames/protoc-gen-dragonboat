@@ -5,7 +5,7 @@ package {{ package . }}
 
 import (
 	"fmt"
-	// "context"
+	"context"
 
 	"google.golang.org/protobuf/proto"
 	sm "github.com/lni/dragonboat/v3/statemachine"
@@ -16,13 +16,19 @@ import (
 {{- range .Services }}
 {{- $svc := .Name }}
 
-type I{{ $svc }}Server interface {
+type I{{ $svc }}DragonboatServer interface {
 {{- range .Methods }}
 	{{ name . }}(req *{{ name .Input }}) (*{{ name .Output }}, error)
 {{- end }}
 }
 
-func Dragonboat{{ $svc }}Lookup(s I{{ $svc }}Server, query interface{}) (interface{}, error) {
+type I{{ $svc }}DragonboatClient interface {
+{{- range .Methods }}
+	{{ name . }}(ctx context.Context, req *{{ name .Input }}, opts ...runtime.DragonboatClientOption) (*{{ name .Output }}, error)
+{{- end }}
+}
+
+func Dragonboat{{ $svc }}Lookup(s I{{ $svc }}DragonboatServer, query interface{}) (interface{}, error) {
 	switch q := query.(type) {
 {{- range .Methods }}
 {{- $moptions := options . }}
@@ -41,7 +47,7 @@ func Dragonboat{{ $svc }}Lookup(s I{{ $svc }}Server, query interface{}) (interfa
 	}
 }
 
-func Dragonboat{{ $svc }}Update(s I{{ $svc }}Server, data []byte) (sm.Result, error) {
+func Dragonboat{{ $svc }}Update(s I{{ $svc }}DragonboatServer, data []byte) (sm.Result, error) {
 	req := runtime.DragonboatRequest{}
 	if err := proto.Unmarshal(data, &req); err != nil {
 		return runtime.MakeDragonboatResult(nil, fmt.Errorf("DragonboatRequest unmarshal err: %w", err)), nil
@@ -64,6 +70,33 @@ func Dragonboat{{ $svc }}Update(s I{{ $svc }}Server, data []byte) (sm.Result, er
 		return runtime.MakeDragonboatResult(nil, fmt.Errorf("unknown mutation type: %T", m)), nil
 	}
 }
+
+type {{ $svc }}DragonboatClient struct {
+	client runtime.IDragonboatClient
+}
+
+func New{{ $svc }}DragonboatClient(client runtime.IDragonboatClient) I{{ $svc }}DragonboatClient {
+	return &{{ $svc }}DragonboatClient{client: client}
+}
+
+{{- range .Methods }}
+{{- $moptions := options . }}
+{{- $mtype := default $moptions.Type "query" }}
+func (it *{{ $svc }}DragonboatClient) {{ name . }}(ctx context.Context, req *{{ name .Input }}, opts ...runtime.DragonboatClientOption) (*{{ name .Output }}, error) {
+{{- if (eq $mtype "query")}}
+	resp, err := it.client.Query(ctx, req, opts...)
+{{- else }}
+	resp, err := it.client.Mutate(ctx, req, opts...)
+{{- end }}
+	if r, ok := resp.(*{{ name .Output }}); ok {
+		return r, err
+	} else if err != nil {
+		return nil, err
+	} else {
+		return nil, fmt.Errorf("cannot parse %T response type to *{{ name .Output }}", resp)
+	}
+}
+{{- end }}
 
 {{- end }}
 `
