@@ -9,3 +9,11 @@ build: proto
 .PHONY: test
 test: build
 	@protoc -I=. --go_out=paths=source_relative:. --dragonboat_out=paths=source_relative:. testdata/test.proto
+
+.PHONY: tag
+tag:
+	@git tag $$(convco version -b)
+
+.PHONY: release
+release: tag
+	@git push --tags
