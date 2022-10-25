@@ -111,12 +111,15 @@ func TestDragonboat(t *testing.T) {
 	}()
 	startShard(t, nh)
 	waitReady(nh)
+
 	client := pb.NewTestDragonboatClient(runtime.NewDragonboatClient(nh, 0))
 	resp, err := client.QueryAddressBook(context.TODO(), &pb.QueryAddressBookRequest{Id: 0}, runtime.WithClientTimeout(time.Second))
 	assert.Nil(t, err)
+
 	assert.Equal(t, "0", resp.Data[0].Data.(*pb.AddressBook_Company).Company.Name)
 	_, err = client.MutateAddressBook(context.TODO(), &pb.MutateAddressBookRequest{Id: 0}, runtime.WithClientTimeout(time.Second))
 	assert.Nil(t, err)
+
 	resp, err = client.QueryAddressBook(context.TODO(), &pb.QueryAddressBookRequest{Id: 0}, runtime.WithClientTimeout(time.Second))
 	assert.Nil(t, err)
 	assert.Equal(t, "1", resp.Data[0].Data.(*pb.AddressBook_Company).Company.Name)
