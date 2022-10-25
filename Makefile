@@ -12,7 +12,7 @@ test: build
 
 .PHONY: tag
 tag:
-	@git tag $$(convco version -b)
+	@git tag v$$(convco version -b)
 
 .PHONY: release
 release: tag
