@@ -28,7 +28,7 @@ func MakeDragonboatResult(msg proto.Message, err error) sm.Result {
 	} else if errors.As(err, &derr) {
 		dr.Error = &DragonboatError{Code: derr.Code, Msg: err.Error()}
 	} else {
-		dr.Error = &DragonboatError{Code: CodeInternalError, Msg: err.Error()}
+		dr.Error = &DragonboatError{Code: ErrCodeInternalError, Msg: err.Error()}
 	}
 
 	if bs, err := proto.Marshal(dr); err != nil {
