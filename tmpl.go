@@ -9,7 +9,6 @@ import (
 
 	"google.golang.org/protobuf/proto"
 	sm "github.com/lni/dragonboat/v3/statemachine"
-	anypb "google.golang.org/protobuf/types/known/anypb"
 
 	"github.com/LilithGames/protoc-gen-dragonboat/runtime"
 )
@@ -43,19 +42,11 @@ func Dragonboat{{ $svc }}Lookup(s I{{ $svc }}DragonboatServer, query interface{}
 {{- end }}
 {{- end }}
 	default:
-		return nil, fmt.Errorf("unknown query type: %T", q)
+		return nil, fmt.Errorf("%w(type: %T)", runtime.ErrUnknownRequest, q)
 	}
 }
 
-func Dragonboat{{ $svc }}Update(s I{{ $svc }}DragonboatServer, data []byte) (sm.Result, error) {
-	req := runtime.DragonboatRequest{}
-	if err := proto.Unmarshal(data, &req); err != nil {
-		return runtime.MakeDragonboatResult(nil, fmt.Errorf("DragonboatRequest unmarshal err: %w", err)), nil
-	}
-	msg, err := anypb.UnmarshalNew(req.Data, proto.UnmarshalOptions{DiscardUnknown: true})
-	if err != nil {
-		return runtime.MakeDragonboatResult(nil, fmt.Errorf("DragonboatRequest.Data unmarshal err: %w", err)), nil
-	}
+func Dragonboat{{ $svc }}UpdateDispatch(s I{{ $svc }}DragonboatServer, msg proto.Message) (proto.Message, error) {
 	switch m := msg.(type) {
 {{- range .Methods }}
 {{- $moptions := options . }}
@@ -63,12 +54,21 @@ func Dragonboat{{ $svc }}Update(s I{{ $svc }}DragonboatServer, data []byte) (sm.
 {{- if (eq $mtype "mutation")}}
 	case *{{ name .Input }}:
 		resp, err := s.{{ name . }}(m)
-		return runtime.MakeDragonboatResult(resp, err), nil
+		return resp, err
 {{- end }}
 {{- end }}
 	default:
-		return runtime.MakeDragonboatResult(nil, fmt.Errorf("unknown mutation type: %T", m)), nil
+		return nil, fmt.Errorf("%w(type: %T)", runtime.ErrUnknownRequest, m)
 	}
+}
+
+func Dragonboat{{ $svc }}Update(s I{{ $svc }}DragonboatServer, data []byte) (sm.Result, error) {
+	msg, err := runtime.ParseDragonboatRequest(data)
+	if err != nil {
+		return runtime.MakeDragonboatResult(nil, err), nil
+	}
+	resp, err := Dragonboat{{ $svc }}UpdateDispatch(s, msg)
+	return runtime.MakeDragonboatResult(resp, err), nil
 }
 
 type {{ $svc }}DragonboatClient struct {

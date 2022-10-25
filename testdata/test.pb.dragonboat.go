@@ -7,7 +7,6 @@ import (
 
 	sm "github.com/lni/dragonboat/v3/statemachine"
 	"google.golang.org/protobuf/proto"
-	anypb "google.golang.org/protobuf/types/known/anypb"
 
 	"github.com/LilithGames/protoc-gen-dragonboat/runtime"
 )
@@ -31,26 +30,27 @@ func DragonboatTestLookup(s ITestDragonboatServer, query interface{}) (interface
 		}
 		return resp, nil
 	default:
-		return nil, fmt.Errorf("unknown query type: %T", q)
+		return nil, fmt.Errorf("%w(type: %T)", runtime.ErrUnknownRequest, q)
+	}
+}
+
+func DragonboatTestUpdateDispatch(s ITestDragonboatServer, msg proto.Message) (proto.Message, error) {
+	switch m := msg.(type) {
+	case *MutateAddressBookRequest:
+		resp, err := s.MutateAddressBook(m)
+		return resp, err
+	default:
+		return nil, fmt.Errorf("%w(type: %T)", runtime.ErrUnknownRequest, m)
 	}
 }
 
 func DragonboatTestUpdate(s ITestDragonboatServer, data []byte) (sm.Result, error) {
-	req := runtime.DragonboatRequest{}
-	if err := proto.Unmarshal(data, &req); err != nil {
-		return runtime.MakeDragonboatResult(nil, fmt.Errorf("DragonboatRequest unmarshal err: %w", err)), nil
-	}
-	msg, err := anypb.UnmarshalNew(req.Data, proto.UnmarshalOptions{DiscardUnknown: true})
+	msg, err := runtime.ParseDragonboatRequest(data)
 	if err != nil {
-		return runtime.MakeDragonboatResult(nil, fmt.Errorf("DragonboatRequest.Data unmarshal err: %w", err)), nil
+		return runtime.MakeDragonboatResult(nil, err), nil
 	}
-	switch m := msg.(type) {
-	case *MutateAddressBookRequest:
-		resp, err := s.MutateAddressBook(m)
-		return runtime.MakeDragonboatResult(resp, err), nil
-	default:
-		return runtime.MakeDragonboatResult(nil, fmt.Errorf("unknown mutation type: %T", m)), nil
-	}
+	resp, err := DragonboatTestUpdateDispatch(s, msg)
+	return runtime.MakeDragonboatResult(resp, err), nil
 }
 
 type TestDragonboatClient struct {
