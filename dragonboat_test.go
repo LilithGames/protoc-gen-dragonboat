@@ -123,4 +123,8 @@ func TestDragonboat(t *testing.T) {
 	resp, err = client.QueryAddressBook(context.TODO(), &pb.QueryAddressBookRequest{Id: 0}, runtime.WithClientTimeout(time.Second))
 	assert.Nil(t, err)
 	assert.Equal(t, "1", resp.Data[0].Data.(*pb.AddressBook_Company).Company.Name)
+
+	resp, err = client.QueryAddressBook(context.TODO(), &pb.QueryAddressBookRequest{Id: 0}, runtime.WithClientTimeout(time.Second), runtime.WithClientStale(true))
+	assert.Nil(t, err)
+	assert.Equal(t, "1", resp.Data[0].Data.(*pb.AddressBook_Company).Company.Name)
 }

@@ -43,7 +43,13 @@ func (it *DragonboatClient) Query(ctx context.Context, query proto.Message, opts
 		defer cancel()
 	}
 
-	result, err := it.nh.SyncRead(ctx, it.shardID, query)
+	var result interface{}
+	var err error
+	if o.stale {
+		result, err = it.nh.StaleRead(it.shardID, query)
+	} else {
+		result, err = it.nh.SyncRead(ctx, it.shardID, query)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("SyncRead(%v), err: %w", query, err)
 	}
@@ -80,6 +86,7 @@ func (it *DragonboatClient) Mutate(ctx context.Context, mutation proto.Message, 
 type dragonboatClientOptions struct {
 	session *client.Session
 	timeout *time.Duration
+	stale bool
 }
 
 type DragonboatClientOption interface {
@@ -123,5 +130,11 @@ func WithClientSession(session *client.Session) DragonboatClientOption {
 func WithClientTimeout(timeout time.Duration) DragonboatClientOption {
 	return newFuncDragonboatClientOption(func(o *dragonboatClientOptions) {
 		o.timeout = &timeout
+	})
+}
+
+func WithClientStale(stale bool) DragonboatClientOption {
+	return newFuncDragonboatClientOption(func(o *dragonboatClientOptions) {
+		o.stale = stale
 	})
 }
