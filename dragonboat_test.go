@@ -55,6 +55,46 @@ func (it *stateMachine) MutateAddressBook(req *pb.MutateAddressBookRequest) (*pb
 	return &pb.MutateAddressBookResponse{Count: int32(it.Count)}, nil
 }
 
+type concurrency struct {
+	ClusterID uint64
+	NodeID    uint64
+	Count     uint64
+}
+
+func newConcurrency(clusterID uint64, nodeID uint64) sm.IConcurrentStateMachine {
+	return &concurrency{ClusterID: clusterID, NodeID: nodeID}
+}
+
+func (it *concurrency) Lookup(query interface{}) (interface{}, error) {
+	return pb.DragonboatTestLookup(it, query)
+}
+func (it *concurrency) Update(entries []sm.Entry) ([]sm.Entry, error) {
+	return pb.DragonboatTestConcurrencyUpdate(it, entries)
+}
+func (it *concurrency) PrepareSnapshot() (interface{}, error) {
+	return nil, nil
+}
+func (it *concurrency) SaveSnapshot(p interface{}, w io.Writer, fc sm.ISnapshotFileCollection, done <-chan struct{}) error {
+	return nil
+}
+func (it *concurrency) RecoverFromSnapshot(r io.Reader, files []sm.SnapshotFile, done <-chan struct{}) error {
+	return nil
+}
+func (it *concurrency) Close() error {
+	return nil
+}
+func (it *concurrency) QueryAddressBook(req *pb.QueryAddressBookRequest) (*pb.QueryAddressBookResponse, error) {
+	return &pb.QueryAddressBookResponse{
+		Data: []*pb.AddressBook{
+			&pb.AddressBook{Data: &pb.AddressBook_Company{Company: &pb.Company{Name: fmt.Sprintf("%d", it.Count)}}},
+		},
+	}, nil
+}
+func (it *concurrency) MutateAddressBook(req *pb.MutateAddressBookRequest) (*pb.MutateAddressBookResponse, error) {
+	it.Count++
+	return &pb.MutateAddressBookResponse{Count: int32(it.Count)}, nil
+}
+
 func newDragonboat(t *testing.T) *dragonboat.NodeHost {
 	conf := config.NodeHostConfig{
 		NodeHostDir: "single_nodehost_test_dir_safe_to_delete",
@@ -71,7 +111,7 @@ func newDragonboat(t *testing.T) *dragonboat.NodeHost {
 	assert.Nil(t, err)
 	return nh
 }
-func startShard(t *testing.T, nh *dragonboat.NodeHost) {
+func startShard(t *testing.T, nh *dragonboat.NodeHost, fn interface{}) {
 	conf := config.Config{
 		NodeID: 1,
 		ClusterID: 0,
@@ -83,7 +123,15 @@ func startShard(t *testing.T, nh *dragonboat.NodeHost) {
 		OrderedConfigChange: false,
 	}
 	initials := map[uint64]string{1: "127.0.0.1:63000"}
-	err := nh.StartCluster(initials, false, newStateMachine, conf)
+	var err error
+	switch f := fn.(type) {
+	case sm.CreateStateMachineFunc:
+		err = nh.StartCluster(initials, false, f, conf)
+	case sm.CreateConcurrentStateMachineFunc:
+		err = nh.StartConcurrentCluster(initials, false, f, conf)
+	default:
+		panic(fmt.Errorf("unknown fn type: %T", f))
+	}
 	assert.Nil(t, err)
 }
 func waitReady(nh *dragonboat.NodeHost) {
@@ -109,7 +157,7 @@ func TestDragonboat(t *testing.T) {
 		err := vfs.Default.RemoveAll("single_nodehost_test_dir_safe_to_delete")
 		assert.Nil(t, err)
 	}()
-	startShard(t, nh)
+	startShard(t, nh, sm.CreateStateMachineFunc(newStateMachine))
 	waitReady(nh)
 
 	client := pb.NewTestDragonboatClient(runtime.NewDragonboatClient(nh, 0))
@@ -127,4 +175,34 @@ func TestDragonboat(t *testing.T) {
 	resp, err = client.QueryAddressBook(context.TODO(), &pb.QueryAddressBookRequest{Id: 0}, runtime.WithClientTimeout(time.Second), runtime.WithClientStale(true))
 	assert.Nil(t, err)
 	assert.Equal(t, "1", resp.Data[0].Data.(*pb.AddressBook_Company).Company.Name)
+}
+
+func TestDragonboatConcurrency(t *testing.T) {
+	var p pb.Person
+	fmt.Printf("%+v\n", p)
+	nh := newDragonboat(t)
+	defer func() {
+		nh.Stop()
+		err := vfs.Default.RemoveAll("single_nodehost_test_dir_safe_to_delete")
+		assert.Nil(t, err)
+	}()
+	startShard(t, nh, sm.CreateConcurrentStateMachineFunc(newConcurrency))
+	waitReady(nh)
+
+	client := pb.NewTestDragonboatClient(runtime.NewDragonboatClient(nh, 0))
+	resp, err := client.QueryAddressBook(context.TODO(), &pb.QueryAddressBookRequest{Id: 0}, runtime.WithClientTimeout(time.Second))
+	assert.Nil(t, err)
+
+	assert.Equal(t, "0", resp.Data[0].Data.(*pb.AddressBook_Company).Company.Name)
+	_, err = client.MutateAddressBook(context.TODO(), &pb.MutateAddressBookRequest{Id: 0}, runtime.WithClientTimeout(time.Second))
+	assert.Nil(t, err)
+
+	resp, err = client.QueryAddressBook(context.TODO(), &pb.QueryAddressBookRequest{Id: 0}, runtime.WithClientTimeout(time.Second))
+	assert.Nil(t, err)
+	assert.Equal(t, "1", resp.Data[0].Data.(*pb.AddressBook_Company).Company.Name)
+
+	resp, err = client.QueryAddressBook(context.TODO(), &pb.QueryAddressBookRequest{Id: 0}, runtime.WithClientTimeout(time.Second), runtime.WithClientStale(true))
+	assert.Nil(t, err)
+	assert.Equal(t, "1", resp.Data[0].Data.(*pb.AddressBook_Company).Company.Name)
+
 }

@@ -53,6 +53,19 @@ func DragonboatTestUpdate(s ITestDragonboatServer, data []byte) (sm.Result, erro
 	return runtime.MakeDragonboatResult(resp, err), nil
 }
 
+func DragonboatTestConcurrencyUpdate(s ITestDragonboatServer, entries []sm.Entry) ([]sm.Entry, error) {
+	for _, entry := range entries {
+		msg, err := runtime.ParseDragonboatRequest(entry.Cmd)
+		if err != nil {
+			entry.Result = runtime.MakeDragonboatResult(nil, err)
+		} else {
+			resp, err := DragonboatTestUpdateDispatch(s, msg)
+			entry.Result = runtime.MakeDragonboatResult(resp, err)
+		}
+	}
+	return entries, nil
+}
+
 type TestDragonboatClient struct {
 	client runtime.IDragonboatClient
 }

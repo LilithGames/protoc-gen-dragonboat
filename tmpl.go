@@ -71,6 +71,19 @@ func Dragonboat{{ $svc }}Update(s I{{ $svc }}DragonboatServer, data []byte) (sm.
 	return runtime.MakeDragonboatResult(resp, err), nil
 }
 
+func Dragonboat{{ $svc }}ConcurrencyUpdate(s I{{ $svc }}DragonboatServer, entries []sm.Entry) ([]sm.Entry, error) {
+	for _, entry := range entries {
+		msg, err := runtime.ParseDragonboatRequest(entry.Cmd)
+		if err != nil {
+			entry.Result = runtime.MakeDragonboatResult(nil, err)
+		} else {
+			resp, err := Dragonboat{{ $svc }}UpdateDispatch(s, msg)
+			entry.Result = runtime.MakeDragonboatResult(resp, err)
+		}
+	}
+	return entries, nil
+}
+
 type {{ $svc }}DragonboatClient struct {
 	client runtime.IDragonboatClient
 }
