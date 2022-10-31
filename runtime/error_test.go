@@ -15,11 +15,11 @@ func TestErrorAs(t *testing.T) {
 }
 
 func TestDragonboatError1(t *testing.T) {
-	r := MakeDragonboatResult(nil, fmt.Errorf("wrap1: %w", NewDragonboatError(ErrCodeInternalError, "fatal")))
+	r := MakeDragonboatResult(nil, fmt.Errorf("wrap1: %w", NewDragonboatError(ErrCodeInternal, "fatal")))
 	v, err := ParseDragonboatResult(r)
 	assert.Nil(t, v)
 	fmt.Printf("%+v\n", err)
-	assert.Equal(t, GetDragonboatErrorCode(err), ErrCodeInternalError)
+	assert.Equal(t, GetDragonboatErrorCode(err), ErrCodeInternal)
 }
 
 func TestDragonboatError2(t *testing.T) {
@@ -37,8 +37,8 @@ func TestDragonboatError3(t *testing.T) {
 }
 
 func TestDragonboatError4(t *testing.T) {
-	r := MakeDragonboatResult(&DragonboatExample{Data: "data1"}, NewDragonboatError(ErrCodeInternalError, "partial"))
+	r := MakeDragonboatResult(&DragonboatExample{Data: "data1"}, NewDragonboatError(ErrCodeInternal, "partial"))
 	v, err := ParseDragonboatResult(r)
-	assert.Equal(t, GetDragonboatErrorCode(err), ErrCodeInternalError)
+	assert.Equal(t, GetDragonboatErrorCode(err), ErrCodeInternal)
 	assert.Equal(t, v.(*DragonboatExample).Data, "data1")
 }
