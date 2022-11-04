@@ -39,16 +39,22 @@ func MakeDragonboatResult(msg proto.Message, err error) sm.Result {
 }
 
 func ParseDragonboatResult(result sm.Result) (proto.Message, error) {
-	dr := DragonboatResult{}
-	if err := proto.Unmarshal(result.Data, &dr); err != nil {
+	dr := &DragonboatResult{}
+	if err := proto.Unmarshal(result.Data, dr); err != nil {
 		return nil, fmt.Errorf("proto.Unmarshal(DragonboatResult) err: %w", err)
 	}
 	if dr.Data == nil {
+		if GetDragonboatErrorCode(dr.Error) == ErrCodeOK {
+			return nil, nil
+		}
 		return nil, dr.Error
 	}
 	msg, err := anypb.UnmarshalNew(dr.Data, proto.UnmarshalOptions{DiscardUnknown: true})
 	if err != nil {
 		return nil, fmt.Errorf("anypb.UnmarshalNew() err: %w", err)
+	}
+	if GetDragonboatErrorCode(dr.Error) == ErrCodeOK {
+		return msg, nil
 	}
 	return msg, dr.Error
 }

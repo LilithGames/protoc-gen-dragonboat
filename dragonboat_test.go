@@ -44,6 +44,9 @@ func (it *stateMachine) Close() error {
 }
 
 func (it *stateMachine) QueryAddressBook(req *pb.QueryAddressBookRequest) (*pb.QueryAddressBookResponse, error) {
+	if req.Id == 999 {
+		panic(999)
+	}
 	return &pb.QueryAddressBookResponse{
 		Data: []*pb.AddressBook{
 			&pb.AddressBook{Data: &pb.AddressBook_Company{Company: &pb.Company{Name: fmt.Sprintf("%d", it.Count)}}},
@@ -51,6 +54,9 @@ func (it *stateMachine) QueryAddressBook(req *pb.QueryAddressBookRequest) (*pb.Q
 	}, nil
 }
 func (it *stateMachine) MutateAddressBook(req *pb.MutateAddressBookRequest) (*pb.MutateAddressBookResponse, error) {
+	if req.Id == 999 {
+		panic(999)
+	}
 	it.Count++
 	return &pb.MutateAddressBookResponse{Count: int32(it.Count)}, nil
 }
@@ -84,6 +90,9 @@ func (it *concurrency) Close() error {
 	return nil
 }
 func (it *concurrency) QueryAddressBook(req *pb.QueryAddressBookRequest) (*pb.QueryAddressBookResponse, error) {
+	if req.Id == 999 {
+		panic(999)
+	}
 	return &pb.QueryAddressBookResponse{
 		Data: []*pb.AddressBook{
 			&pb.AddressBook{Data: &pb.AddressBook_Company{Company: &pb.Company{Name: fmt.Sprintf("%d", it.Count)}}},
@@ -91,6 +100,12 @@ func (it *concurrency) QueryAddressBook(req *pb.QueryAddressBookRequest) (*pb.Qu
 	}, nil
 }
 func (it *concurrency) MutateAddressBook(req *pb.MutateAddressBookRequest) (*pb.MutateAddressBookResponse, error) {
+	if req.Id == 888 {
+		return nil, runtime.NewDragonboatError(888, "hello derror")
+	}
+	if req.Id == 999 {
+		panic(999)
+	}
 	it.Count++
 	return &pb.MutateAddressBookResponse{Count: int32(it.Count)}, nil
 }
@@ -165,8 +180,9 @@ func TestDragonboat(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, "0", resp.Data[0].Data.(*pb.AddressBook_Company).Company.Name)
-	_, err = client.MutateAddressBook(context.TODO(), &pb.MutateAddressBookRequest{Id: 0}, runtime.WithClientTimeout(time.Second))
+	resp2, err := client.MutateAddressBook(context.TODO(), &pb.MutateAddressBookRequest{Id: 0}, runtime.WithClientTimeout(time.Second))
 	assert.Nil(t, err)
+	assert.Equal(t, int32(1), resp2.Count)
 
 	resp, err = client.QueryAddressBook(context.TODO(), &pb.QueryAddressBookRequest{Id: 0}, runtime.WithClientTimeout(time.Second))
 	assert.Nil(t, err)
@@ -175,6 +191,12 @@ func TestDragonboat(t *testing.T) {
 	resp, err = client.QueryAddressBook(context.TODO(), &pb.QueryAddressBookRequest{Id: 0}, runtime.WithClientTimeout(time.Second), runtime.WithClientStale(true))
 	assert.Nil(t, err)
 	assert.Equal(t, "1", resp.Data[0].Data.(*pb.AddressBook_Company).Company.Name)
+
+	// test panic
+	_, err = client.MutateAddressBook(context.TODO(), &pb.MutateAddressBookRequest{Id: 999}, runtime.WithClientTimeout(time.Second))
+	assert.NotNil(t, err)
+	_, err = client.QueryAddressBook(context.TODO(), &pb.QueryAddressBookRequest{Id: 999}, runtime.WithClientTimeout(time.Second))
+	assert.NotNil(t, err)
 }
 
 func TestDragonboatConcurrency(t *testing.T) {
@@ -192,8 +214,8 @@ func TestDragonboatConcurrency(t *testing.T) {
 	client := pb.NewTestDragonboatClient(runtime.NewDragonboatClient(nh, 0))
 	resp, err := client.QueryAddressBook(context.TODO(), &pb.QueryAddressBookRequest{Id: 0}, runtime.WithClientTimeout(time.Second))
 	assert.Nil(t, err)
-
 	assert.Equal(t, "0", resp.Data[0].Data.(*pb.AddressBook_Company).Company.Name)
+
 	_, err = client.MutateAddressBook(context.TODO(), &pb.MutateAddressBookRequest{Id: 0}, runtime.WithClientTimeout(time.Second))
 	assert.Nil(t, err)
 
@@ -204,5 +226,16 @@ func TestDragonboatConcurrency(t *testing.T) {
 	resp, err = client.QueryAddressBook(context.TODO(), &pb.QueryAddressBookRequest{Id: 0}, runtime.WithClientTimeout(time.Second), runtime.WithClientStale(true))
 	assert.Nil(t, err)
 	assert.Equal(t, "1", resp.Data[0].Data.(*pb.AddressBook_Company).Company.Name)
+
+	// test error
+	_, err = client.MutateAddressBook(context.TODO(), &pb.MutateAddressBookRequest{Id: 888}, runtime.WithClientTimeout(time.Second))
+	assert.NotNil(t, err)
+	assert.Equal(t, int32(888), runtime.GetDragonboatErrorCode(err))
+
+	// test panic
+	_, err = client.MutateAddressBook(context.TODO(), &pb.MutateAddressBookRequest{Id: 999}, runtime.WithClientTimeout(time.Second))
+	assert.NotNil(t, err)
+	_, err = client.QueryAddressBook(context.TODO(), &pb.QueryAddressBookRequest{Id: 999}, runtime.WithClientTimeout(time.Second))
+	assert.NotNil(t, err)
 
 }

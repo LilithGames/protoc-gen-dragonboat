@@ -6,6 +6,7 @@ package {{ package . }}
 import (
 	"fmt"
 	"context"
+	"runtime/debug"
 
 	"google.golang.org/protobuf/proto"
 	sm "github.com/lni/dragonboat/v3/statemachine"
@@ -27,7 +28,12 @@ type I{{ $svc }}DragonboatClient interface {
 {{- end }}
 }
 
-func Dragonboat{{ $svc }}Lookup(s I{{ $svc }}DragonboatServer, query interface{}) (interface{}, error) {
+func Dragonboat{{ $svc }}Lookup(s I{{ $svc }}DragonboatServer, query interface{}) (result interface{}, err error) {
+	defer func() {
+		if perr := recover(); perr != nil {
+			err = fmt.Errorf("panic: %v\nstacktrace from panic: %s", perr, string(debug.Stack()))
+		}
+	}()
 	switch q := query.(type) {
 {{- range .Methods }}
 {{- $moptions := options . }}
@@ -46,7 +52,12 @@ func Dragonboat{{ $svc }}Lookup(s I{{ $svc }}DragonboatServer, query interface{}
 	}
 }
 
-func Dragonboat{{ $svc }}UpdateDispatch(s I{{ $svc }}DragonboatServer, msg proto.Message) (proto.Message, error) {
+func Dragonboat{{ $svc }}UpdateDispatch(s I{{ $svc }}DragonboatServer, msg proto.Message) (result proto.Message, err error) {
+	defer func() {
+		if perr := recover(); perr != nil {
+			err = fmt.Errorf("panic: %v\nstacktrace from panic: %s", perr, string(debug.Stack()))
+		}
+	}()
 	switch m := msg.(type) {
 {{- range .Methods }}
 {{- $moptions := options . }}
@@ -72,7 +83,8 @@ func Dragonboat{{ $svc }}Update(s I{{ $svc }}DragonboatServer, data []byte) (sm.
 }
 
 func Dragonboat{{ $svc }}ConcurrencyUpdate(s I{{ $svc }}DragonboatServer, entries []sm.Entry) ([]sm.Entry, error) {
-	for _, entry := range entries {
+	for i := range entries {
+		entry := &entries[i]
 		msg, err := runtime.ParseDragonboatRequest(entry.Cmd)
 		if err != nil {
 			entry.Result = runtime.MakeDragonboatResult(nil, err)

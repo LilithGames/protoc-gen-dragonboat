@@ -4,6 +4,7 @@ package testdata
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 
 	sm "github.com/lni/dragonboat/v3/statemachine"
 	"google.golang.org/protobuf/proto"
@@ -21,7 +22,12 @@ type ITestDragonboatClient interface {
 	MutateAddressBook(ctx context.Context, req *MutateAddressBookRequest, opts ...runtime.DragonboatClientOption) (*MutateAddressBookResponse, error)
 }
 
-func DragonboatTestLookup(s ITestDragonboatServer, query interface{}) (interface{}, error) {
+func DragonboatTestLookup(s ITestDragonboatServer, query interface{}) (result interface{}, err error) {
+	defer func() {
+		if perr := recover(); perr != nil {
+			err = fmt.Errorf("panic: %v\nstacktrace from panic: %s", perr, string(debug.Stack()))
+		}
+	}()
 	switch q := query.(type) {
 	case *QueryAddressBookRequest:
 		resp, err := s.QueryAddressBook(q)
@@ -34,7 +40,12 @@ func DragonboatTestLookup(s ITestDragonboatServer, query interface{}) (interface
 	}
 }
 
-func DragonboatTestUpdateDispatch(s ITestDragonboatServer, msg proto.Message) (proto.Message, error) {
+func DragonboatTestUpdateDispatch(s ITestDragonboatServer, msg proto.Message) (result proto.Message, err error) {
+	defer func() {
+		if perr := recover(); perr != nil {
+			err = fmt.Errorf("panic: %v\nstacktrace from panic: %s", perr, string(debug.Stack()))
+		}
+	}()
 	switch m := msg.(type) {
 	case *MutateAddressBookRequest:
 		resp, err := s.MutateAddressBook(m)
@@ -54,7 +65,8 @@ func DragonboatTestUpdate(s ITestDragonboatServer, data []byte) (sm.Result, erro
 }
 
 func DragonboatTestConcurrencyUpdate(s ITestDragonboatServer, entries []sm.Entry) ([]sm.Entry, error) {
-	for _, entry := range entries {
+	for i := range entries {
+		entry := &entries[i]
 		msg, err := runtime.ParseDragonboatRequest(entry.Cmd)
 		if err != nil {
 			entry.Result = runtime.MakeDragonboatResult(nil, err)

@@ -18,7 +18,6 @@ func TestDragonboatError1(t *testing.T) {
 	r := MakeDragonboatResult(nil, fmt.Errorf("wrap1: %w", NewDragonboatError(ErrCodeInternal, "fatal")))
 	v, err := ParseDragonboatResult(r)
 	assert.Nil(t, v)
-	fmt.Printf("%+v\n", err)
 	assert.Equal(t, GetDragonboatErrorCode(err), ErrCodeInternal)
 }
 
@@ -41,4 +40,22 @@ func TestDragonboatError4(t *testing.T) {
 	v, err := ParseDragonboatResult(r)
 	assert.Equal(t, GetDragonboatErrorCode(err), ErrCodeInternal)
 	assert.Equal(t, v.(*DragonboatExample).Data, "data1")
+}
+
+func TestGetDragonboatErrorCode(t *testing.T) {
+	code1 := GetDragonboatErrorCode(nil)
+	assert.Equal(t, code1, ErrCodeOK)
+	code2 := GetDragonboatErrorCode(fmt.Errorf("hello"))
+	assert.Equal(t, code2, ErrCodeInternal)
+	code3 := GetDragonboatErrorCode(NewDragonboatError(999, "hello"))
+	assert.Equal(t, code3, int32(999))
+	code4 := GetDragonboatErrorCode(fmt.Errorf("wrap: %w", NewDragonboatError(401, "hello")))
+	assert.Equal(t, code4, int32(401))
+	code5 := GetDragonboatErrorCode(fmt.Errorf("wrap: %w", fmt.Errorf("hello")))
+	assert.Equal(t, code5, ErrCodeInternal)
+	code6 := GetDragonboatErrorCode(fmt.Errorf("wrap: %w", nil))
+	assert.Equal(t, code6, ErrCodeInternal)
+	var err *DragonboatError
+	code7 := GetDragonboatErrorCode(err)
+	assert.Equal(t, code7, ErrCodeOK)
 }

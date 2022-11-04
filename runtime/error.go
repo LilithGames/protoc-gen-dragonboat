@@ -26,6 +26,9 @@ func GetDragonboatErrorCode(err error) int32 {
 	}
 	var derr *DragonboatError
 	if errors.As(err, &derr) {
+		if derr == nil {
+			return ErrCodeOK
+		}
 		return derr.Code
 	} else {
 		return ErrCodeInternal
