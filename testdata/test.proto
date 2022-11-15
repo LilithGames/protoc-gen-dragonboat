@@ -6,6 +6,10 @@ import "runtime/dragonboat.proto";
 
 option go_package = "github.com/LilithGames/protoc-gen-dragonboat/testdata";
 
+message Meta {
+  map<uint64, uint64> node_ids = 1;
+}
+
 message Person {
   string name = 1;
   int32 id = 2;
