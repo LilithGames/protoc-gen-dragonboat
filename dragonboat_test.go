@@ -112,7 +112,8 @@ func TestDragonboat(t *testing.T) {
 	defer stop()
 	nh := nhs[1]
 
-	client := pb.NewTestDragonboatClient(runtime.NewDragonboatClient(nh, 0))
+	dc := runtime.NewDragonboatClient(nh, 0)
+	client := pb.NewTestDragonboatClient(dc)
 	resp, err := client.QueryAddressBook(context.TODO(), &pb.QueryAddressBookRequest{Id: 0}, runtime.WithClientTimeout(time.Second))
 	assert.Nil(t, err)
 
@@ -134,6 +135,10 @@ func TestDragonboat(t *testing.T) {
 	assert.NotNil(t, err)
 	_, err = client.QueryAddressBook(context.TODO(), &pb.QueryAddressBookRequest{Id: 999}, runtime.WithClientTimeout(time.Second))
 	assert.NotNil(t, err)
+
+	resp5, err := dc.Query(context.TODO(), nil, runtime.WithClientTimeout(time.Second))
+	assert.Nil(t, resp5)
+	assert.Nil(t, err)
 }
 
 func TestDragonboatConcurrency(t *testing.T) {

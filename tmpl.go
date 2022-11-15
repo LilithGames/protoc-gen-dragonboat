@@ -47,6 +47,9 @@ func Dragonboat{{ $svc }}Lookup(s I{{ $svc }}DragonboatServer, query interface{}
 		return resp, nil
 {{- end }}
 {{- end }}
+	case nil:
+		// healthcheck
+		return nil, nil
 	default:
 		return nil, fmt.Errorf("%w(type: %T)", runtime.ErrUnknownRequest, q)
 	}

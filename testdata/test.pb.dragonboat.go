@@ -35,6 +35,9 @@ func DragonboatTestLookup(s ITestDragonboatServer, query interface{}) (result in
 			return resp, fmt.Errorf("ITestServer.QueryAddressBook(%v) err: %w", q, err)
 		}
 		return resp, nil
+	case nil:
+		// healthcheck
+		return nil, nil
 	default:
 		return nil, fmt.Errorf("%w(type: %T)", runtime.ErrUnknownRequest, q)
 	}
