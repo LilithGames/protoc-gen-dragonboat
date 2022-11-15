@@ -53,9 +53,6 @@ func (it *DragonboatClient) Query(ctx context.Context, query proto.Message, opts
 	if err != nil {
 		return nil, fmt.Errorf("SyncRead(%v), err: %w", query, err)
 	}
-	if result == nil {
-		return nil, nil
-	}
 	r, ok := result.(proto.Message)
 	if !ok {
 		return nil, fmt.Errorf("result(%v) expect to be proto.Message", result)
@@ -72,6 +69,7 @@ func (it *DragonboatClient) Mutate(ctx context.Context, mutation proto.Message, 
 	}
 	data, err := anypb.New(mutation)
 	if err != nil {
+		fmt.Printf("%+v\n", err)
 		return nil, fmt.Errorf("marshal mutation data err: %w", err)
 	}
 	req := &DragonboatRequest{Data: data}

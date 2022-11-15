@@ -35,9 +35,9 @@ func DragonboatTestLookup(s ITestDragonboatServer, query interface{}) (result in
 			return resp, fmt.Errorf("ITestServer.QueryAddressBook(%v) err: %w", q, err)
 		}
 		return resp, nil
-	case nil:
+	case *runtime.DragonboatVoid:
 		// healthcheck
-		return nil, nil
+		return &runtime.DragonboatVoid{}, nil
 	default:
 		return nil, fmt.Errorf("%w(type: %T)", runtime.ErrUnknownRequest, q)
 	}
@@ -53,6 +53,9 @@ func DragonboatTestUpdateDispatch(s ITestDragonboatServer, msg proto.Message) (r
 	case *MutateAddressBookRequest:
 		resp, err := s.MutateAddressBook(m)
 		return resp, err
+	case *runtime.DragonboatVoid:
+		// dummy update increate index
+		return &runtime.DragonboatVoid{}, nil
 	default:
 		return nil, fmt.Errorf("%w(type: %T)", runtime.ErrUnknownRequest, m)
 	}

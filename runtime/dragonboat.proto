@@ -28,3 +28,5 @@ message DragonboatResult {
   google.protobuf.Any data = 1;
   DragonboatError error = 2;
 }
+
+message DragonboatVoid{}

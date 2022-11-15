@@ -47,9 +47,9 @@ func Dragonboat{{ $svc }}Lookup(s I{{ $svc }}DragonboatServer, query interface{}
 		return resp, nil
 {{- end }}
 {{- end }}
-	case nil:
+	case *runtime.DragonboatVoid:
 		// healthcheck
-		return nil, nil
+		return &runtime.DragonboatVoid{}, nil
 	default:
 		return nil, fmt.Errorf("%w(type: %T)", runtime.ErrUnknownRequest, q)
 	}
@@ -71,6 +71,9 @@ func Dragonboat{{ $svc }}UpdateDispatch(s I{{ $svc }}DragonboatServer, msg proto
 		return resp, err
 {{- end }}
 {{- end }}
+	case *runtime.DragonboatVoid:
+		// dummy update increate index
+		return &runtime.DragonboatVoid{}, nil
 	default:
 		return nil, fmt.Errorf("%w(type: %T)", runtime.ErrUnknownRequest, m)
 	}

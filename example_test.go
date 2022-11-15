@@ -142,6 +142,29 @@ func TestSnapshot(t *testing.T) {
 
 }
 
+func TestSnapshot2(t *testing.T) {
+	clusterID := uint64(0)
+	initials := map[uint64]string{
+		1: "127.0.0.1:3001",
+		2: "127.0.0.1:3002",
+		3: "127.0.0.1:3003",
+	}
+	nh, stop := newDragonboat(clusterID, initials, sm.CreateStateMachineFunc(NewExampleStateMachine))
+	defer stop()
+
+	tick(nh[1], clusterID)
+	time.Sleep(time.Second)
+
+	nh[3].StopCluster(clusterID)
+	log.Println("[INFO]", fmt.Sprintf("Node 3 Stopped"))
+	time.Sleep(time.Millisecond*300)
+
+	startShard(nh[3], clusterID, 3, nil, sm.CreateStateMachineFunc(NewExampleStateMachine))
+	waitReady(nh[3], clusterID)
+
+	time.Sleep(time.Second)
+
+}
 
 func TestLookup(t *testing.T) {
 	clusterID := uint64(0)

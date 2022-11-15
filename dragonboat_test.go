@@ -136,8 +136,10 @@ func TestDragonboat(t *testing.T) {
 	_, err = client.QueryAddressBook(context.TODO(), &pb.QueryAddressBookRequest{Id: 999}, runtime.WithClientTimeout(time.Second))
 	assert.NotNil(t, err)
 
-	resp5, err := dc.Query(context.TODO(), nil, runtime.WithClientTimeout(time.Second))
-	assert.Nil(t, resp5)
+	_, err = dc.Query(context.TODO(), &runtime.DragonboatVoid{}, runtime.WithClientTimeout(time.Second))
+	assert.Nil(t, err)
+
+	_, err = dc.Mutate(context.TODO(), &runtime.DragonboatVoid{}, runtime.WithClientTimeout(time.Second))
 	assert.Nil(t, err)
 }
 

@@ -40,7 +40,7 @@ func startShard(nh *dragonboat.NodeHost, clusterID uint64, nodeID uint64, initia
 		CheckQuorum:         true,
 		ElectionRTT:         5,
 		HeartbeatRTT:        1,
-		SnapshotEntries:     0,
+		SnapshotEntries:     3,
 		CompactionOverhead:  0,
 		OrderedConfigChange: false,
 	}
