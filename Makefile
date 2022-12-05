@@ -17,3 +17,7 @@ tag:
 .PHONY: release
 release: tag
 	@git push --tags
+
+.PHONY: install 
+install :
+	@go install github.com/LilithGames/protoc-gen-dragonboat

@@ -30,3 +30,97 @@ message DragonboatResult {
 }
 
 message DragonboatVoid{}
+
+// Empty =(prepare)> Migrating =(commit)> Upgrading =(all-upgraded)> Upgraded =(all-saved)> Empty
+//                             =(expire)> Expired   =(reset)>        Empty
+//                             =(reset)>  Empty
+enum MigrationStateType {
+  Empty = 0;
+  Migrating = 1;
+  Upgrading = 2;
+  Upgraded = 3;
+  Expired = 4;
+}
+
+message MigrationNode {
+  uint64 node_id = 1;
+  string version = 2;
+  map<uint64, bool> nodes = 3;
+}
+
+message MigrationNodeWrapper {
+  MigrationNode node = 1;
+  uint64 Epoch = 2;
+}
+
+message MigrationState {
+  MigrationStateType type = 1;
+  string version = 2;
+  uint64 expire = 3;
+  uint64 epoch = 4;
+  map<uint64, MigrationNodeWrapper> node_upgraded = 5;
+  map<uint64, MigrationNodeWrapper> node_saved = 6;
+  uint64 state_index = 7;
+}
+
+enum CompressionType {
+  None = 0;
+  Snappy = 1;
+}
+
+message MigrationStateView {
+  MigrationStateType type = 1;
+  string version = 2;
+  uint64 expire = 3;
+  uint64 epoch = 4;
+  map<uint64, MigrationNodeWrapper> node_upgraded = 5;
+  map<uint64, MigrationNodeWrapper> node_saved = 6;
+  uint64 state_index = 7;
+}
+
+message Migration {
+  bytes state = 1;
+  CompressionType compression_type = 2;
+}
+
+message DragonboatPrepareMigrationRequest {
+  CompressionType compression_type = 1;
+  uint64 expire = 2;
+}
+message DragonboatPrepareMigrationResponse {
+  Migration migration = 1;
+}
+message DragonboatCommitMigrationRequest {
+  Migration migration = 1;
+}
+message DragonboatCommitMigrationResponse {
+  MigrationStateType type = 1;
+}
+message DragonboatUpdateMigrationRequest{
+  MigrationNode node = 1;
+}
+message DragonboatUpdateMigrationResponse{
+  uint64 updated = 1;
+}
+message DragonboatCompleteMigrationRequest{
+  MigrationNode node = 1;
+}
+message DragonboatCompleteMigrationResponse{
+  uint64 updated = 1;
+}
+message DragonboatResetMigrationRequest{}
+message DragonboatResetMigrationResponse{}
+message DragonboatQueryMigrationRequest{}
+message DragonboatQueryMigrationResponse{
+  MigrationStateView view = 1;
+}
+message DragonboatQueryIndexRequest{}
+message DragonboatQueryIndexResponse{
+  uint64 state_index = 1;
+}
+
+message DragonboatRepairMigrationRequest{
+  string confirm = 1;
+  string current_version = 2;
+}
+message DragonboatRepairMigrationResponse{}

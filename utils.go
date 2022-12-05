@@ -40,16 +40,24 @@ func startShard(nh *dragonboat.NodeHost, clusterID uint64, nodeID uint64, initia
 		CheckQuorum:         true,
 		ElectionRTT:         5,
 		HeartbeatRTT:        1,
-		SnapshotEntries:     3,
+		SnapshotEntries:     1,
 		CompactionOverhead:  0,
 		OrderedConfigChange: false,
 	}
 	var err error
 	switch f := fn.(type) {
 	case sm.CreateStateMachineFunc:
-		err = nh.StartCluster(initials, false, f, conf)
+		if len(initials) > 0 {
+			err = nh.StartCluster(initials, false, f, conf)
+		} else {
+			err = nh.StartCluster(nil, true, f, conf)
+		}
 	case sm.CreateConcurrentStateMachineFunc:
-		err = nh.StartConcurrentCluster(initials, false, f, conf)
+		if len(initials) > 0 {
+			err = nh.StartConcurrentCluster(initials, false, f, conf)
+		} else {
+			err = nh.StartConcurrentCluster(nil, true, f, conf)
+		}
 	default:
 		panic(fmt.Errorf("unknown fn type: %T", f))
 	}
@@ -74,6 +82,7 @@ func waitReady(nh *dragonboat.NodeHost, clusterID uint64) {
 }
 
 func newDragonboat(clusterID uint64, initials map[uint64]string, fn any) (map[uint64]*dragonboat.NodeHost, func()) {
+	vfs.Default.RemoveAll("single_nodehost_test_dir_safe_to_delete")
 	nh := make(map[uint64]*dragonboat.NodeHost, len(initials))
 	for nhid, addr := range initials {
 		nh[nhid] = newNodeHost(nhid, addr)

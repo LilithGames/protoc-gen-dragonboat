@@ -37,6 +37,7 @@ func TestDragonboatError3(t *testing.T) {
 
 func TestDragonboatError4(t *testing.T) {
 	r := MakeDragonboatResult(&DragonboatExample{Data: "data1"}, NewDragonboatError(ErrCodeInternal, "partial"))
+	assert.Equal(t, int32(r.Value), ErrCodeInternal)
 	v, err := ParseDragonboatResult(r)
 	assert.Equal(t, GetDragonboatErrorCode(err), ErrCodeInternal)
 	assert.Equal(t, v.(*DragonboatExample).Data, "data1")

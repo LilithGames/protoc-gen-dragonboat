@@ -14,6 +14,10 @@ import (
 type IDragonboatClient interface {
 	Query(ctx context.Context, q proto.Message, opts ...DragonboatClientOption) (proto.Message, error)
 	Mutate(ctx context.Context, m proto.Message, opts ...DragonboatClientOption) (proto.Message, error)
+	Save(ctx context.Context, opts ...DragonboatClientOption) (uint64, error)
+	AddNode(ctx context.Context, nodeID uint64, addr string, opts ...DragonboatClientOption) error
+	RemoveNode(ctx context.Context, nodeID uint64, opts ...DragonboatClientOption) error
+	GetShardID() uint64
 }
 
 type DragonboatClient struct {
@@ -84,10 +88,65 @@ func (it *DragonboatClient) Mutate(ctx context.Context, mutation proto.Message, 
 	return ParseDragonboatResult(result)
 }
 
+func (it *DragonboatClient) Save(ctx context.Context, opts ...DragonboatClientOption) (uint64, error) {
+	o := getDragonboatClientOptionsWithBase(it.o, opts...)
+	if o.timeout != nil {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, *o.timeout)
+		defer cancel()
+	}
+	opt := dragonboat.SnapshotOption{}
+	if o.compactOverhead != nil {
+		opt.OverrideCompactionOverhead = true
+		opt.CompactionOverhead = *o.compactOverhead
+	}
+	if o.exportPath != nil {
+		opt.Exported = true
+		opt.ExportPath = *o.exportPath
+	}
+	index, err := it.nh.SyncRequestSnapshot(ctx, it.shardID, opt)
+	if err != nil {
+		return 0, fmt.Errorf("SyncRequestSnapshot err: %w", err)
+	}
+	return index, nil
+}
+
+func (it *DragonboatClient) AddNode(ctx context.Context, nodeID uint64, addr string, opts ...DragonboatClientOption) error {
+	o := getDragonboatClientOptionsWithBase(it.o, opts...)
+	if o.timeout != nil {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, *o.timeout)
+		defer cancel()
+	}
+	if err := it.nh.SyncRequestAddNode(ctx, it.shardID, nodeID, addr, 0); err != nil {
+		return fmt.Errorf("SyncRequestAddNode(%d, %d, %s) err: %w", it.shardID, nodeID, addr, err)
+	}
+	return nil
+}
+
+func (it *DragonboatClient) RemoveNode(ctx context.Context, nodeID uint64, opts ...DragonboatClientOption) error {
+	o := getDragonboatClientOptionsWithBase(it.o, opts...)
+	if o.timeout != nil {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, *o.timeout)
+		defer cancel()
+	}
+	if err := it.nh.SyncRequestDeleteNode(ctx, it.shardID, nodeID, 0); err != nil {
+		return fmt.Errorf("SyncRequestDeleteNode(%d, %d) err: %w", it.shardID, nodeID, err)
+	}
+	return nil
+}
+
+func (it *DragonboatClient) GetShardID() uint64 {
+	return it.shardID
+}
+
 type dragonboatClientOptions struct {
 	session *client.Session
 	timeout *time.Duration
 	stale bool
+	compactOverhead *uint64
+	exportPath *string
 }
 
 type DragonboatClientOption interface {
@@ -137,5 +196,16 @@ func WithClientTimeout(timeout time.Duration) DragonboatClientOption {
 func WithClientStale(stale bool) DragonboatClientOption {
 	return newFuncDragonboatClientOption(func(o *dragonboatClientOptions) {
 		o.stale = stale
+	})
+}
+
+func DragonboatClientCompactOverhead(compactOverhead uint64) DragonboatClientOption {
+	return newFuncDragonboatClientOption(func(o *dragonboatClientOptions) {
+		o.compactOverhead = &compactOverhead
+	})
+}
+func DragonboatClientExportPath(exportPath string) DragonboatClientOption {
+	return newFuncDragonboatClientOption(func(o *dragonboatClientOptions) {
+		o.exportPath = &exportPath
 	})
 }

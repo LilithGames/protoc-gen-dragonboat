@@ -34,8 +34,16 @@ func MakeDragonboatResult(msg proto.Message, err error) sm.Result {
 	if bs, err := proto.Marshal(dr); err != nil {
 		panic(fmt.Errorf("proto.Marshal(DragonboatResult) err: %w", err))
 	} else {
-		return sm.Result{Data: bs}
+		value := uint64(ErrCodeOK)
+		if dr.Error != nil {
+			value = uint64(dr.Error.Code)
+		}
+		return sm.Result{Value: value, Data: bs}
 	}
+}
+
+func GetDragonboatResultErrorCode(r sm.Result) int32 {
+	return int32(r.Value)
 }
 
 func ParseDragonboatResult(result sm.Result) (proto.Message, error) {
@@ -57,4 +65,14 @@ func ParseDragonboatResult(result sm.Result) (proto.Message, error) {
 		return msg, nil
 	}
 	return msg, dr.Error
+}
+
+func ClientResponseConversion[T proto.Message](resp proto.Message, err error) (T, error) {
+	if r, ok := resp.(T); ok {
+		return r, err
+	} else if err != nil {
+		return *new(T), err
+	} else {
+		return *new(T), fmt.Errorf("%T cannot conversion to %T", resp, *new(T))
+	}
 }

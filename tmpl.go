@@ -51,7 +51,7 @@ func Dragonboat{{ $svc }}Lookup(s I{{ $svc }}DragonboatServer, query interface{}
 		// healthcheck
 		return &runtime.DragonboatVoid{}, nil
 	default:
-		return nil, fmt.Errorf("%w(type: %T)", runtime.ErrUnknownRequest, q)
+		return nil, runtime.NewDragonboatError(runtime.ErrCodeUnknownRequest, fmt.Sprintf("ErrCodeUnknownRequest type: %T", q))
 	}
 }
 
@@ -75,7 +75,7 @@ func Dragonboat{{ $svc }}UpdateDispatch(s I{{ $svc }}DragonboatServer, msg proto
 		// dummy update increate index
 		return &runtime.DragonboatVoid{}, nil
 	default:
-		return nil, fmt.Errorf("%w(type: %T)", runtime.ErrUnknownRequest, m)
+		return nil, runtime.NewDragonboatError(runtime.ErrCodeUnknownRequest, fmt.Sprintf("ErrCodeUnknownRequest type: %T", m))
 	}
 }
 
@@ -88,7 +88,7 @@ func Dragonboat{{ $svc }}Update(s I{{ $svc }}DragonboatServer, data []byte) (sm.
 	return runtime.MakeDragonboatResult(resp, err), nil
 }
 
-func Dragonboat{{ $svc }}ConcurrencyUpdate(s I{{ $svc }}DragonboatServer, entries []sm.Entry) ([]sm.Entry, error) {
+func Dragonboat{{ $svc }}ConcurrentUpdate(s I{{ $svc }}DragonboatServer, entries []sm.Entry) ([]sm.Entry, error) {
 	for i := range entries {
 		entry := &entries[i]
 		msg, err := runtime.ParseDragonboatRequest(entry.Cmd)
@@ -119,13 +119,7 @@ func (it *{{ $svc }}DragonboatClient) {{ name . }}(ctx context.Context, req *{{ 
 {{- else }}
 	resp, err := it.client.Mutate(ctx, req, opts...)
 {{- end }}
-	if r, ok := resp.(*{{ name .Output }}); ok {
-		return r, err
-	} else if err != nil {
-		return nil, err
-	} else {
-		return nil, fmt.Errorf("cannot parse %T response type to *{{ name .Output }}", resp)
-	}
+	return runtime.ClientResponseConversion[*{{ name .Output }}](resp, err)
 }
 {{- end }}
 

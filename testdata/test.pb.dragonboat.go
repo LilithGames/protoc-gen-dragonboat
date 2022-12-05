@@ -39,7 +39,7 @@ func DragonboatTestLookup(s ITestDragonboatServer, query interface{}) (result in
 		// healthcheck
 		return &runtime.DragonboatVoid{}, nil
 	default:
-		return nil, fmt.Errorf("%w(type: %T)", runtime.ErrUnknownRequest, q)
+		return nil, runtime.NewDragonboatError(runtime.ErrCodeUnknownRequest, fmt.Sprintf("ErrCodeUnknownRequest type: %T", q))
 	}
 }
 
@@ -57,7 +57,7 @@ func DragonboatTestUpdateDispatch(s ITestDragonboatServer, msg proto.Message) (r
 		// dummy update increate index
 		return &runtime.DragonboatVoid{}, nil
 	default:
-		return nil, fmt.Errorf("%w(type: %T)", runtime.ErrUnknownRequest, m)
+		return nil, runtime.NewDragonboatError(runtime.ErrCodeUnknownRequest, fmt.Sprintf("ErrCodeUnknownRequest type: %T", m))
 	}
 }
 
@@ -70,7 +70,7 @@ func DragonboatTestUpdate(s ITestDragonboatServer, data []byte) (sm.Result, erro
 	return runtime.MakeDragonboatResult(resp, err), nil
 }
 
-func DragonboatTestConcurrencyUpdate(s ITestDragonboatServer, entries []sm.Entry) ([]sm.Entry, error) {
+func DragonboatTestConcurrentUpdate(s ITestDragonboatServer, entries []sm.Entry) ([]sm.Entry, error) {
 	for i := range entries {
 		entry := &entries[i]
 		msg, err := runtime.ParseDragonboatRequest(entry.Cmd)
@@ -93,21 +93,9 @@ func NewTestDragonboatClient(client runtime.IDragonboatClient) ITestDragonboatCl
 }
 func (it *TestDragonboatClient) QueryAddressBook(ctx context.Context, req *QueryAddressBookRequest, opts ...runtime.DragonboatClientOption) (*QueryAddressBookResponse, error) {
 	resp, err := it.client.Query(ctx, req, opts...)
-	if r, ok := resp.(*QueryAddressBookResponse); ok {
-		return r, err
-	} else if err != nil {
-		return nil, err
-	} else {
-		return nil, fmt.Errorf("cannot parse %T response type to *QueryAddressBookResponse", resp)
-	}
+	return runtime.ClientResponseConversion[*QueryAddressBookResponse](resp, err)
 }
 func (it *TestDragonboatClient) MutateAddressBook(ctx context.Context, req *MutateAddressBookRequest, opts ...runtime.DragonboatClientOption) (*MutateAddressBookResponse, error) {
 	resp, err := it.client.Mutate(ctx, req, opts...)
-	if r, ok := resp.(*MutateAddressBookResponse); ok {
-		return r, err
-	} else if err != nil {
-		return nil, err
-	} else {
-		return nil, fmt.Errorf("cannot parse %T response type to *MutateAddressBookResponse", resp)
-	}
+	return runtime.ClientResponseConversion[*MutateAddressBookResponse](resp, err)
 }

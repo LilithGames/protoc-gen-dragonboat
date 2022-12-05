@@ -71,7 +71,7 @@ func (it *concurrency) Lookup(query interface{}) (interface{}, error) {
 	return pb.DragonboatTestLookup(it, query)
 }
 func (it *concurrency) Update(entries []sm.Entry) ([]sm.Entry, error) {
-	return pb.DragonboatTestConcurrencyUpdate(it, entries)
+	return pb.DragonboatTestConcurrentUpdate(it, entries)
 }
 func (it *concurrency) PrepareSnapshot() (interface{}, error) {
 	return nil, nil
@@ -143,7 +143,7 @@ func TestDragonboat(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestDragonboatConcurrency(t *testing.T) {
+func TestDragonboatConcurrent(t *testing.T) {
 	initials := map[uint64]string{1: "127.0.0.1:63000"}
 	nhs, stop := newDragonboat(0, initials, sm.CreateConcurrentStateMachineFunc(newConcurrency))
 	defer stop()

@@ -4,8 +4,9 @@ go 1.19
 
 require (
 	github.com/golang/protobuf v1.5.2
+	github.com/golang/snappy v0.0.3-0.20201103224600-674baa8c7fc3
 	github.com/hashicorp/memberlist v0.5.0
-	github.com/lni/dragonboat/v3 v3.3.5
+	github.com/lni/dragonboat/v3 v3.3.6
 	github.com/lni/goutils v1.3.0
 	github.com/lyft/protoc-gen-star v0.6.1
 	github.com/stretchr/testify v1.6.1
@@ -22,7 +23,6 @@ require (
 	github.com/cockroachdb/sentry-go v0.6.1-cockroachdb.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/gogo/protobuf v1.3.1 // indirect
-	github.com/golang/snappy v0.0.3-0.20201103224600-674baa8c7fc3 // indirect
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-immutable-radix v1.0.0 // indirect
